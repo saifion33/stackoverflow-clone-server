@@ -4,6 +4,12 @@ import Question from "../models/question.js";
 // get all questions
 export const getAllQuestions = async (req, res) => {
 
+    Question.find().then(questions =>
+        res.status(200).json({ status: 200, message: 'Get all questions successfully', data: questions })
+    ).catch(err => {
+        res.status(500).json({ status: 500, message: 'There was an error.', error: err.message })
+    })
+
 }
 
 // *****************************************************************************************************************
