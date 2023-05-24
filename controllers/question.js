@@ -65,5 +65,61 @@ export const deleteQuestion = async (req, res) => {
 // *****************************************************************************************************************
 
 export const voteQuestion = async (req, res) => {
- 
+    const { questionId, userId, voteType } = req.body;
+
+    // check questionId and userId is valid ids or not
+    const isIdsValid = mongoose.Types.ObjectId.isValid(questionId) && mongoose.Types.ObjectId.isValid(userId);
+    if (!isIdsValid) {
+        return res.status(403).json({ status: 403, message: 'questionId or userId is invalid', data: null })
+    }
+
+
+    try {
+        const question = await Question.findById(questionId)
+
+        // check if upVote contains userId
+        const upIndex = question.upVote.findIndex(id => id === userId)
+        // check if downVote contains userId
+        const downIndex = question.downVote.findIndex(id => id === userId)
+
+        // when voteType is upVote
+        if (voteType === 'upVote') {
+
+            // when downVote contains userId then remove it
+            if (downIndex !== -1) {
+                question.downVote = question.downVote.filter(id => id !== userId)
+            }
+            // when upVote not contains userId then push userId into upVote Array
+            if (upIndex === -1) {
+                question.upVote.push(userId)
+            } else {
+                // when upVote contains userId then remove it
+                question.upVote = question.upVote.filter(id => id !== userId)
+            }
+
+        } else if (voteType === 'downVote') {
+            // when upVote contains userId then remove it
+            if (upIndex !== -1) {
+                question.upVote = question.upVote.filter(id => id !== userId)
+            }
+            // when downVote not contains userId then push userId into downVote Array
+            if (downIndex === -1) {
+                question.downVote.push(userId)
+            } else {
+                // when downVote contains userId then remove it
+                question.downVote = question.downVote.filter(id => id !== userId)
+            }
+        }
+
+        // find question by id and update question
+        Question.findByIdAndUpdate(questionId, question, { new: true }).then((question) => {
+            res.status(200).json({ status: 200, message: `vote updated successfully`, data: question })
+        }).catch(err => {
+            res.status(500).json({ status: 500, message: 'error updating question', error: err })
+        })
+
+    }
+    catch (err) {
+        res.status(500).json({ status: 500, message: 'error updating question', error: err })
+    }
 }
