@@ -3,6 +3,8 @@ import mongoose from 'mongoose'
 import cors from 'cors'
 import dotenv from 'dotenv'
 
+import authRoutes from './routes/auth.js'
+
 const app = express();
 // cofigure environment variables
 dotenv.config()
@@ -25,3 +27,5 @@ app.use(cors());
 app.get('/', (req, res) => {
     res.send('Stackoverflow server is Running...');
 })
+
+app.use('/auth', authRoutes)
