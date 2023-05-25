@@ -17,7 +17,6 @@ export const postAnswer = async (req, res) => {
 
 export const deleteAnswer = async (req, res) => {
     const { questionId, answerId, userId } = req.body
-    const ids = [questionId, answerId, userId]
     if (!(mongoose.Types.ObjectId.isValid(questionId))) {
         return res.status(400).json({ status: 400, message: 'Question ID is invalid', data: null })
     }

@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/auth.js'
 import questionRoutes from './routes/question.js'
 import answerRoutes from './routes/answer.js'
+import userRoutes from './routes/user.js'
 
 const app = express();
 // cofigure environment variables
@@ -13,7 +14,9 @@ dotenv.config()
 
 
 
+// eslint-disable-next-line no-undef
 const PORT = process.env.PORT || 3000
+// eslint-disable-next-line no-undef
 const DATABASE_URL = process.env.DATABASE_URL
 
 mongoose.connect(DATABASE_URL).then(() => app.listen(PORT, () => {
@@ -33,3 +36,4 @@ app.get('/', (req, res) => {
 app.use('/auth', authRoutes)
 app.use('/question', questionRoutes)
 app.use('/answer', answerRoutes)
+app.use('/user', userRoutes)
