@@ -5,6 +5,8 @@ import dotenv from 'dotenv'
 
 import authRoutes from './routes/auth.js'
 import questionRoutes from './routes/question.js'
+import answerRoutes from './routes/answer.js'
+
 const app = express();
 // cofigure environment variables
 dotenv.config()
@@ -30,3 +32,4 @@ app.get('/', (req, res) => {
 
 app.use('/auth', authRoutes)
 app.use('/question', questionRoutes)
+app.use('/answer', answerRoutes)
