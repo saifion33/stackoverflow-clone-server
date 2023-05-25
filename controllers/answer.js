@@ -3,6 +3,7 @@ import Question from "../models/question.js";
 
 export const postAnswer = async (req, res) => {
     const { questionId, answer } = req.body;
+    answer.author.id = req.userId;
     if (!(mongoose.Types.ObjectId.isValid(questionId))) {
         return res.status(400).json({ status: 400, message: 'Question ID is invalid', data: null })
     }
@@ -16,11 +17,11 @@ export const postAnswer = async (req, res) => {
 }
 
 export const deleteAnswer = async (req, res) => {
-    const { questionId, answerId, userId } = req.body
+    const { questionId, answerId } = req.body
     if (!(mongoose.Types.ObjectId.isValid(questionId))) {
         return res.status(400).json({ status: 400, message: 'Question ID is invalid', data: null })
     }
-    if (!(mongoose.Types.ObjectId.isValid(userId))) {
+    if (!(mongoose.Types.ObjectId.isValid(req.userId))) {
         return res.status(400).json({ status: 400, message: 'User ID is invalid', data: null })
     }
     if (!(mongoose.Types.ObjectId.isValid(answerId))) {
@@ -34,7 +35,7 @@ export const deleteAnswer = async (req, res) => {
     }
 
     const isAnswerExists = question.answer.find(answer => answer._id == answerId)
-    const isUserValid = question.answer.find(answer => answer.author.id === userId)
+    const isUserValid = question.answer.find(answer => answer.author.id === req.userId)
     if (!isAnswerExists) {
         return res.status(404).json({ status: 404, message: 'Answer not Found', data: null })
     }

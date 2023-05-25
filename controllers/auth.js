@@ -31,7 +31,8 @@ export const login = async (req, res) => {
         if (!isPasswordCrt) {
             return res.status(401).json({ message: 'Password is incorrect.' })
         }
-        const token = await jwt.sign({ email: existingUser.email, id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+        // eslint-disable-next-line no-undef
+        const token = jwt.sign({ email: existingUser.email, id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
 
         res.status(200).json({ status: 200, message: 'Login succesfully', data: { token, user: existingUser } })
 

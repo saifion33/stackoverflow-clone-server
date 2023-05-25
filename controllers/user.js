@@ -15,7 +15,7 @@ export const updateUser = async (req, res) => {
     }
     const user = await User.findById(userId)
 
-    if (user._id != userId) {
+    if (user._id != req.userId) {
         return res.status(401).json({ status: 404, message: 'User do not have permission to update Profile', data: null })
     }
 
@@ -35,7 +35,7 @@ export const deleteUser = async (req, res) => {
         return res.status(404).json({ status: 404, message: 'User does not exist', data: null })
     }
 
-    if (user._id != userId) {
+    if (user._id != req.userId) {
         return res.status(401).json({ status: 401, message: 'User do not have permisson to delete account', data: null })
     }
 

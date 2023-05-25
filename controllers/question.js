@@ -18,7 +18,7 @@ export const getAllQuestions = async (req, res) => {
 
 export const askQuestion = async (req, res) => {
     const { title, body, tags, author } = req.body;
-
+    author.id = req.userId
     // check if author id is a valid ID
     const isAuthorValid = mongoose.Types.ObjectId.isValid(author.id);
     if (!isAuthorValid) {
@@ -27,11 +27,9 @@ export const askQuestion = async (req, res) => {
 
     // Post question to database
     Question.create({ title, body, tags, author }).then((response) => {
-        console.log(response)
-        res.send('question posted successfully')
+        res.status(200).json({ status: 200, message: 'Question Posted successfully.', data: response })
     }).catch((error) => {
-        console.log(error)
-        res.send('error ' + error)
+        res.status(500).json({ status: 500, message: 'Question Posted successfully.', error: error })
     })
 }
 
@@ -40,8 +38,8 @@ export const askQuestion = async (req, res) => {
 // *****************************************************************************************************************
 
 export const deleteQuestion = async (req, res) => {
-    const { questionId, authorId } = req.body;
-
+    const { questionId } = req.body;
+    const authorId = req.userId;
     // when questionId or authorId are not valid
     if (!(mongoose.Types.ObjectId.isValid(questionId) && mongoose.Types.ObjectId.isValid(authorId))) {
         return res.status(401).json({ status: 404, message: 'Invalid questionId or authorId' })
@@ -71,8 +69,8 @@ export const deleteQuestion = async (req, res) => {
 // *****************************************************************************************************************
 
 export const voteQuestion = async (req, res) => {
-    const { questionId, userId, voteType } = req.body;
-
+    const { questionId, voteType } = req.body;
+    const userId = req.userId
     // check questionId and userId is valid ids or not
     const isIdsValid = mongoose.Types.ObjectId.isValid(questionId) && mongoose.Types.ObjectId.isValid(userId);
     if (!isIdsValid) {
