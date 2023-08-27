@@ -2,19 +2,35 @@ import User from '../models/auth.js'
 import bycrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 export const signup = async (req, res) => {
-    const { name, email, password, about, tags } = req.body
-
+    const { displayName, email, password } = req.body
+    
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            console.log('user already exists')
             return res.status(409).json({ status: 409, message: "User with this email already exist.", data: null })
         }
         const hashedPassword = await bycrypt.hash(password, 10)
-        const user = await User.create({ name, email, password: hashedPassword, about, tags })
-        res.status(200).json({ status: 200, message: 'User Account created successfully.', data: user })
+        const userAccount = await User.create({ displayName, email, password: hashedPassword })
+        // eslint-disable-next-line no-undef
+        const token = jwt.sign({ email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+        const profile ={
+            _id:userAccount._id,
+            displayName:userAccount.displayName,
+            email:userAccount.email,
+            about:userAccount.about,
+            location:userAccount.location,
+            reputation:userAccount.reputation,
+            tags:userAccount.tags,
+            imageUrl:userAccount.imageUrl,
+            questionCount:userAccount.questionCount,
+            asnswerCount:userAccount.answerCount,
+            joinedOn:userAccount.joinedOn,
+        }
+        const user = { token,profile }
+        res.status(200).json({ status: 200, message: 'User Account created successfully.', user })
 
     } catch (error) {
+        console.log(error)
         res.status(400).json({ status: 500, message: "Error creating user Plese check if you provide all required field", error })
     }
 }
