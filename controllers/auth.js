@@ -31,28 +31,43 @@ export const signup = async (req, res) => {
 
     } catch (error) {
         console.log(error)
-        res.status(400).json({ status: 500, message: "Error creating user Plese check if you provide all required field", error })
+        res.status(400).json({ status: 500, message: "Error creating user Plese check if you provide all required field"})
     }
 }
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const existingUser = await User.findOne({ email })
-        if (!existingUser) {
+        const userAccount = await User.findOne({ email })
+        if (!userAccount) {
             console.log('user not found')
             return res.status(404).json({ status: 404, message: 'User with this email does not exist.', data: null })
         }
-        const isPasswordCrt = bycrypt.compare(password, existingUser.password)
+        const isPasswordCrt =await bycrypt.compare(password, userAccount.password)
         if (!isPasswordCrt) {
-            return res.status(401).json({ message: 'Password is incorrect.' })
+            return res.status(401).json({status:401, message: 'Password is incorrect.' })
+        }
+        
+        const profile ={
+            _id:userAccount._id,
+            displayName:userAccount.displayName,
+            email:userAccount.email,
+            about:userAccount.about,
+            location:userAccount.location,
+            reputation:userAccount.reputation,
+            tags:userAccount.tags,
+            imageUrl:userAccount.imageUrl,
+            questionCount:userAccount.questionCount,
+            asnswerCount:userAccount.answerCount,
+            joinedOn:userAccount.joinedOn,
         }
         // eslint-disable-next-line no-undef
-        const token = jwt.sign({ email: existingUser.email, id: existingUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
-
-        res.status(200).json({ status: 200, message: 'Login succesfully', data: { token, user: existingUser } })
+        const token = jwt.sign({ email: userAccount.email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+        const user={token,profile}
+        res.status(200).json({ status: 200, message: 'Login succesfully', user })
 
     } catch (error) {
-        res.status(500).json({ status: 500, message: 'Something went wrong', error: error.message })
+        console.log(error)
+        res.status(500).json({ status: 500, message: 'Something went wrong'})
     }
 }
