@@ -40,7 +40,6 @@ export const login = async (req, res) => {
     try {
         const userAccount = await User.findOne({ email })
         if (!userAccount) {
-            console.log('user not found')
             return res.status(404).json({ status: 404, message: 'User with this email does not exist.', data: null })
         }
         const isPasswordCrt =await bycrypt.compare(password, userAccount.password)
@@ -68,6 +67,6 @@ export const login = async (req, res) => {
 
     } catch (error) {
         console.log(error)
-        res.status(500).json({ status: 500, message: 'Something went wrong'})
+        res.status(500).json({ status: 500, message: 'Internal server error'})
     }
 }
