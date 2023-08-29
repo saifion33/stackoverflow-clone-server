@@ -5,15 +5,17 @@ const badgeSchema=new Schema({
     count:{type:Number},
     badgesList:{type:[String]}
 })
+
+
 const userSchema = new Schema({
     displayName: { type: String, required: true },
     email: { type: String, required: true },
     password: { type: String,required: true },
-    about: { type: String },
-    tags: { type: String },
+    about: { type: String,default:'Nothing about me' },
+    tags: { type: String ,default:null},
     location:{ type:String,default:'unknown' },
     reputation:{type:Number,default:0},
-    imageUrl:{type:String},
+    imageUrl:{type:String,default:null},
     questionCount:{type:Number,default:0},
     answerCount:{type:Number,default:0},
     badges:{type:badgeSchema},

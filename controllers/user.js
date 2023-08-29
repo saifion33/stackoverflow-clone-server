@@ -2,9 +2,17 @@ import mongoose from 'mongoose';
 import User from '../models/auth.js'
 
 export const getAllUsers = async (req, res) => {
-    User.find()
-        .then(users => res.status(200).json({ status: 200, message: 'users get Successfully', data: users }))
-        .catch(err => res.status(500).json({ status: 500, message: 'There was an error', error: err }))
+    try {
+        const usersList= await User.find();
+
+        const users=usersList.map(user=>{
+            return ({_id:user._id,displayName:user.displayName,location:user.location,tags:user.tags,imageUrl:user.imageUrl,reputation:user.reputation})
+        })
+        return res.status(200).json({ status: 200, message: 'users get Successfully', data: users })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ status: 500, message: 'internal Server Error' })
+    }
 }
 
 

@@ -7,7 +7,7 @@ export const signup = async (req, res) => {
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(409).json({ status: 409, message: "User with this email already exist.", data: null })
+            return res.status(409).json({ status: 409, message: "User with this email already exist."})
         }
         const hashedPassword = await bycrypt.hash(password, 10)
         const userAccount = await User.create({ displayName, email, password: hashedPassword })
@@ -26,8 +26,7 @@ export const signup = async (req, res) => {
             asnswerCount:userAccount.answerCount,
             joinedOn:userAccount.joinedOn,
         }
-        const user = { token,profile }
-        res.status(200).json({ status: 200, message: 'User Account created successfully.', user })
+        res.status(200).json({ status: 200, message: 'User Account created successfully.', data:{token,profile} })
 
     } catch (error) {
         console.log(error)
@@ -62,8 +61,7 @@ export const login = async (req, res) => {
         }
         // eslint-disable-next-line no-undef
         const token = jwt.sign({ email: userAccount.email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
-        const user={token,profile}
-        res.status(200).json({ status: 200, message: 'Login succesfully', user })
+        res.status(200).json({ status: 200, message: 'Login succesfully', data:{token,profile}})
 
     } catch (error) {
         console.log(error)
