@@ -3,10 +3,10 @@ import User from '../models/auth.js'
 
 export const getAllUsers = async (req, res) => {
     try {
-        const usersList= await User.find();
+        const usersList = await User.find();
 
-        const users=usersList.map(user=>{
-            return ({_id:user._id,displayName:user.displayName,location:user.location,tags:user.tags,imageUrl:user.imageUrl,reputation:user.reputation})
+        const users = usersList.map(user => {
+            return ({ _id: user._id, displayName: user.displayName, location: user.location, tags: user.tags, imageUrl: user.imageUrl, reputation: user.reputation })
         })
         return res.status(200).json({ status: 200, message: 'users get Successfully', data: users })
     } catch (error) {
@@ -50,4 +50,24 @@ export const deleteUser = async (req, res) => {
     User.findByIdAndDelete(userId)
         .then(user => res.status(200).json({ status: 200, message: 'User Account deleted successfully', data: user }))
         .catch(err => res.status(500).json({ status: 500, message: 'There was an error', error: err }))
+}
+
+export const getUserById = async (req, res) => {
+    const userId = req.params.id
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(404).json({ status: 404, message: 'Invalid user id' })
+    }
+    try {
+        const userAccount = await User.findById(userId)
+        if (userAccount) {
+            // eslint-disable-next-line
+            const { email, password, ...user } = userAccount.toObject()
+           return res.status(200).json({ status: 200, message: 'User details get successfully', data: user })
+        }
+        res.status(404).json({ status: 404, message: 'User Not Found'})
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ status: 500, message: 'Internal Server Error' })
+    }
 }
