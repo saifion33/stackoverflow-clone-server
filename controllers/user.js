@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import User from '../models/auth.js'
+import cloudinary from 'cloudinary'
+import { Readable } from 'stream'
+
 
 export const getAllUsers = async (req, res) => {
     try {
@@ -17,21 +20,61 @@ export const getAllUsers = async (req, res) => {
 
 
 export const updateUser = async (req, res) => {
-    const { userId, name, tags, about } = req.body;
+    const userId = req.userId;
     if (!mongoose.Types.ObjectId.isValid(userId)) {
-        res.status(401).json({ status: 404, message: 'User id is not valid', data: null })
+        res.status(404).json({ status: 404, message: 'User id is not valid' })
     }
-    const user = await User.findById(userId)
+    try {
+        const user = await User.findById(userId)
+        if (user._id != req.userId) {
+            return res.status(401).json({ status: 401, message: 'User do not have permission to update Profile' })
+        }
+        if (req.files.length > 0) {
+            cloudinary.v2.config({
+                cloud_name: process.env.STORAGE,
+                api_key: process.env.API_KEY,
+                api_secret: process.env.API_SECRET
+            })
+            const fileBuffer = req.files[0].buffer;
+            const stream = cloudinary.v2.uploader.upload_stream({ public_id: userId, resource_type: 'auto', folder: 'users profile' }, async (error, result) => {
+                if (error) {
+                    console.log(error.message)
+                    res.status(500).json({ status: 500, message: error.message });
+                    return
+                }
+                const imageUrl = result.url;
+                const updates = { imageUrl, ...req.body };
+                const userAccount = await User.findByIdAndUpdate(userId, updates, { new: true })
+                const updatedValues = {
+                    displayName: userAccount.displayName,
+                    about: userAccount.about,
+                    location: userAccount.location,
+                    tags: userAccount.tags,
+                    imageUrl: userAccount.imageUrl
+                }
+                res.status(200).json({ status: 200, message: 'User updated successfully', data: updatedValues })
+            })
+            const readStream = new Readable();
+            readStream.push(fileBuffer)
+            readStream.push(null)
+            readStream.pipe(stream)
+            return
+        }
 
-    if (user._id != req.userId) {
-        return res.status(401).json({ status: 404, message: 'User do not have permission to update Profile', data: null })
+        const userAccount = await User.findByIdAndUpdate(userId, req.body, { new: true })
+        const updatedValues = {
+            displayName: userAccount.displayName,
+            about: userAccount.about,
+            location: userAccount.location,
+            tags: userAccount.tags,
+            imageUrl: userAccount.imageUrl
+        }
+        res.status(200).json({status:200,message:'User Profile updated successfully',data:updatedValues})
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ status: 500, message: 'Internal Server Error' })
     }
-
-    User.findByIdAndUpdate(userId, {
-        $set: { name, about, tags }
-    }, { new: true })
-        .then(user => res.status(200).json({ status: 200, message: 'Profile updated successfully', data: user }))
-        .catch(err => res.status(500).json({ status: 500, message: 'There was an error', error: err }))
 
 }
 
@@ -63,9 +106,9 @@ export const getUserById = async (req, res) => {
         if (userAccount) {
             // eslint-disable-next-line
             const { email, password, ...user } = userAccount.toObject()
-           return res.status(200).json({ status: 200, message: 'User details get successfully', data: user })
+            return res.status(200).json({ status: 200, message: 'User details get successfully', data: user })
         }
-        res.status(404).json({ status: 404, message: 'User Not Found'})
+        res.status(404).json({ status: 404, message: 'User Not Found' })
     } catch (error) {
         console.log(error)
         res.status(500).json({ status: 500, message: 'Internal Server Error' })

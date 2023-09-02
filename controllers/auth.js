@@ -1,6 +1,8 @@
 import User from '../models/auth.js'
 import bycrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+
+
 export const signup = async (req, res) => {
     const { displayName, email, password } = req.body
     
@@ -39,7 +41,7 @@ export const login = async (req, res) => {
     try {
         const userAccount = await User.findOne({ email })
         if (!userAccount) {
-            return res.status(404).json({ status: 404, message: 'User with this email does not exist.', data: null })
+            return res.status(404).json({ status: 404, message: 'User with this email does not exist.'})
         }
         const isPasswordCrt =await bycrypt.compare(password, userAccount.password)
         if (!isPasswordCrt) {
@@ -68,3 +70,4 @@ export const login = async (req, res) => {
         res.status(500).json({ status: 500, message: 'Internal server error'})
     }
 }
+
