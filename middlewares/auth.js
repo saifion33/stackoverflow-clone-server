@@ -18,6 +18,7 @@ const auth = (req, res, next) => {
         req.userId = decodeData?.id
         next();
     } catch (error) {
+        console.log(error);
         res.status(500).json({ status: 500, message:'Internal Server Error'})
     }
 }

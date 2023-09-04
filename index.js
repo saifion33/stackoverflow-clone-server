@@ -34,6 +34,6 @@ app.get('/', (req, res) => {
 })
 
 app.use('/auth', authRoutes)
-app.use('/question', questionRoutes)
-app.use('/answer', answerRoutes)
+app.use('/questions', questionRoutes)
+app.use('/answers', answerRoutes)
 app.use('/users', userRoutes)
