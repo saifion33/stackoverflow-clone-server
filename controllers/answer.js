@@ -1,19 +1,38 @@
 import mongoose from "mongoose";
 import Question from "../models/question.js";
+import Answer from "../models/answer.js"
+import User from "../models/auth.js"
 
 export const postAnswer = async (req, res) => {
-    const { questionId, answer } = req.body;
-    answer.author.id = req.userId;
+    const { questionId, answerBody} = req.body;
+    const userId=req.userId;
     if (!(mongoose.Types.ObjectId.isValid(questionId))) {
-        return res.status(400).json({ status: 400, message: 'Question ID is invalid', data: null })
+        return res.status(400).json({ status: 400, message: 'Question ID is invalid'})
     }
-    if (!(mongoose.Types.ObjectId.isValid(answer.author.id))) {
-        return res.status(400).json({ status: 400, message: 'User ID is invalid', data: null })
+    if (!(mongoose.Types.ObjectId.isValid(userId))) {
+        return res.status(400).json({ status: 400, message: 'User ID is invalid'})
     }
+    
+    try {
+        const userAccount=await User.findById(userId)
+        if (!userAccount) {
+            return res.status(404).json({ status: 404, message: 'User account not found'})
+        }
+        
+        const {_id,displayName,reputation,imageUrl}=userAccount
+        const author={_id,displayName,reputation,imageUrl}
+        const answer={body:answerBody,author,answerOf:questionId}
 
-    Question.findByIdAndUpdate(questionId, { $push: { answer: answer }, $inc: { noOfAnswers: 1 } }, { new: true })
-        .then(question => res.status(200).json({ status: 200, message: 'Answer Posted Successfully', data: question }))
-        .catch(err => res.status(500).json({ status: 500, message: 'Answers could not be Posted', error: err }))
+        // find question object and push answer to it if not found create new one
+        const newanswer = await Answer.findOneAndUpdate({questionId}, {
+            $push: { answers: answer }
+        }, { new: true ,upsert: true})
+
+        res.status(200).json({ status: 200, message: 'Answer posted successfully', data: newanswer })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({status:500,message:'Internal Server Error'})
+    }
 }
 
 export const deleteAnswer = async (req, res) => {
