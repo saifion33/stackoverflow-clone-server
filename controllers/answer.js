@@ -18,20 +18,38 @@ export const postAnswer = async (req, res) => {
         if (!userAccount) {
             return res.status(404).json({ status: 404, message: 'User account not found'})
         }
-        
+
         const {_id,displayName,reputation,imageUrl}=userAccount
         const author={_id,displayName,reputation,imageUrl}
         const answer={body:answerBody,author,answerOf:questionId}
 
         // find question object and push answer to it if not found create new one
-        const newanswer = await Answer.findOneAndUpdate({questionId}, {
+        const allAnswers= await Answer.findOneAndUpdate({questionId}, {
             $push: { answers: answer }
         }, { new: true ,upsert: true})
-
-        res.status(200).json({ status: 200, message: 'Answer posted successfully', data: newanswer })
+        const newAnswer=allAnswers.answers[allAnswers.answers.length - 1]
+        res.status(200).json({ status: 200, message: 'Answer posted successfully', data: newAnswer })
     } catch (error) {
         console.log(error)
         res.status(500).json({status:500,message:'Internal Server Error'})
+    }
+}
+
+export const getAllAnswers=async(req,res) => {
+    const questionId=req.params.questionId;
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+        return res.status(400).json({status:400,message:'Invalid question id.'})
+    }
+    try {
+        const answers=await Answer.findOne({questionId})
+        if (!answers) {
+            return res.status(404).json({status:404,message:'Answers not found.'})
+        }
+        res.status(200).json({status:200,message:'Answers get Successfully.',data:answers})
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({status:500,message:'Internal server error'})
     }
 }
 
