@@ -42,10 +42,24 @@ export const askQuestion = async (req, res) => {
         if (!userAccount) {
             return res.status(404).json({ status: 404, message: 'User Account Not Found' });
         }
+        if (userAccount.questionCount === 0) {
+            userAccount.reputation += 5;
+        }
+        userAccount.questionCount += 1;
+        if (userAccount.questionCount ==5) {
+            userAccount.badges.map(badge=>{
+                if (badge.name==='silver' && !badge.badgesList.includes('Knowledge Seeker')) {
+                    badge.badgesList.push('Knowledge Seeker')
+                    badge.count+=1;
+                }
+            })
+        }
+        await userAccount.save()
         const { _id, displayName, imageUrl, reputation } = userAccount
         const author = { _id, displayName, imageUrl, reputation }
         // Post question to database
         const response = await Question.create({ title, description, tags, author })
+
         res.status(200).json({ status: 200, message: 'Question Posted Successfully.', data: response })
     } catch (error) {
         console.log(error)
@@ -57,23 +71,23 @@ export const askQuestion = async (req, res) => {
 // ************************************************ GET QUESTION BY ID ************************************************
 // *****************************************************************************************************************
 
-export const getQuestionById = async(req, res) => {
+export const getQuestionById = async (req, res) => {
     const questionId = req.params.questionId;
     if (!mongoose.Types.ObjectId.isValid(questionId)) {
         return res.status(400).json({ status: 400, message: 'Invalid question id.' })
     }
 
     try {
-        const question=await Question.findById(questionId)
-        const userAccount=await User.findById(question.author._id)
+        const question = await Question.findById(questionId)
+        const userAccount = await User.findById(question.author._id)
         if (userAccount) {
-            const {_id,displayName,imageUrl,reputation} =userAccount
-            question.author={_id,displayName,imageUrl,reputation}
+            const { _id, displayName, imageUrl, reputation } = userAccount
+            question.author = { _id, displayName, imageUrl, reputation }
         }
         if (!question) {
             return res.status(404).json({ status: 404, message: 'Question not found.' })
         }
-        res.status(200).json({ status: 200, message:'Question found.',data:question })
+        res.status(200).json({ status: 200, message: 'Question found.', data: question })
     } catch (error) {
         console.log(error)
         return res.status(500).json({ status: 400, message: 'Internal server error.' })

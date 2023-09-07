@@ -1,91 +1,171 @@
 import mongoose from "mongoose";
-import Question from "../models/question.js";
 import Answer from "../models/answer.js"
 import User from "../models/auth.js"
 
 export const postAnswer = async (req, res) => {
-    const { questionId, answerBody} = req.body;
-    const userId=req.userId;
+    const { questionId, questionAuthorId, answerBody } = req.body;
+    const userId = req.userId;
     if (!(mongoose.Types.ObjectId.isValid(questionId))) {
-        return res.status(400).json({ status: 400, message: 'Question ID is invalid'})
+        return res.status(400).json({ status: 400, message: 'Question ID is invalid' })
     }
     if (!(mongoose.Types.ObjectId.isValid(userId))) {
-        return res.status(400).json({ status: 400, message: 'User ID is invalid'})
+        return res.status(400).json({ status: 400, message: 'User ID is invalid' })
     }
-    
-    try {
-        const userAccount=await User.findById(userId)
-        if (!userAccount) {
-            return res.status(404).json({ status: 404, message: 'User account not found'})
-        }
 
-        const {_id,displayName,reputation,imageUrl}=userAccount
-        const author={_id,displayName,reputation,imageUrl}
-        const answer={body:answerBody,author,answerOf:questionId}
+    try {
+        const userAccount = await User.findById(userId)
+        if (!userAccount) {
+            return res.status(404).json({ status: 404, message: 'User account not found' })
+        }
+        userAccount.reputation += 5;
+        // Check if answer author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
+        // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
+        if (userAccount.reputation >= 60) {
+            userAccount.badges.map(badge => {
+                if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
+                    badge.badgesList.push('Master')
+                }
+            })
+        } else if (userAccount.reputation >= 100) {
+            userAccount.badges.map(badge => {
+                if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
+                    badge.badgesList.push('Professor')
+                }
+            })
+        }
+        userAccount.answerCount += 1;
+        const { _id, displayName, reputation, imageUrl } = userAccount
+        const author = { _id, displayName, reputation, imageUrl }
+        const answer = { body: answerBody, author, answerOf: questionId }
 
         // find question object and push answer to it if not found create new one
-        const allAnswers= await Answer.findOneAndUpdate({questionId}, {
+        const allAnswers = await Answer.findOneAndUpdate({ questionId, questionAuthorId }, {
             $push: { answers: answer }
-        }, { new: true ,upsert: true})
-        const newAnswer=allAnswers.answers[allAnswers.answers.length - 1]
+        }, { new: true, upsert: true })
+        const newAnswer = allAnswers.answers[allAnswers.answers.length - 1]
+        await userAccount.save()
         res.status(200).json({ status: 200, message: 'Answer posted successfully', data: newAnswer })
     } catch (error) {
         console.log(error)
-        res.status(500).json({status:500,message:'Internal Server Error'})
+        res.status(500).json({ status: 500, message: 'Internal Server Error' })
     }
 }
 
-export const getAllAnswers=async(req,res) => {
-    const questionId=req.params.questionId;
+export const getAllAnswers = async (req, res) => {
+    const questionId = req.params.questionId;
     if (!mongoose.Types.ObjectId.isValid(questionId)) {
-        return res.status(400).json({status:400,message:'Invalid question id.'})
+        return res.status(400).json({ status: 400, message: 'Invalid question id.' })
     }
     try {
-        const answers=await Answer.findOne({questionId})
+        const answers = await Answer.findOne({ questionId })
         if (!answers) {
-            return res.status(404).json({status:404,message:'Answers not found.'})
+            return res.status(404).json({ status: 404, message: 'Answers not found.' })
         }
-        res.status(200).json({status:200,message:'Answers get Successfully.',data:answers})
+        res.status(200).json({ status: 200, message: 'Answers get Successfully.', data: answers })
 
     } catch (error) {
         console.log(error)
-        res.status(500).json({status:500,message:'Internal server error'})
+        res.status(500).json({ status: 500, message: 'Internal server error' })
     }
+}
+
+export const acceptAnswer = async (req, res) => {
+    const { questionAuthorId, questionId, answerId, answerAuthorId } = req.body;
+    const response = await Promise.all([
+        await Answer.findOne({ questionId }),
+        await User.findById(answerAuthorId),
+        await User.findById(questionAuthorId)
+    ])
+    const answersList = response[0]
+    const answerAuthor = response[1]
+    const questionAuthor = response[2]
+    const answer = answersList.answers.filter(answer => answer._id === answerId)
+    // set isAccepted to true
+    answer.isAccepted = true;
+    // increase answer author reputation by 10
+    answerAuthor.reputation += 10;
+    // increase answer author accepted answer count by 1
+    answerAuthor.acceptedAnswerCount += 1;
+
+    // Check if answer author accepted answer count is 10 if yes then give "Accepter" badge to answer author.
+    if (answerAuthor.acceptedAnswerCount === 10) {
+        answerAuthor.badges.map(badge => {
+            if (badge.name === 'gold' && !badge.badgesList.includes('Accepter')) {
+                badge.badgesList.push('Accepter')
+            }
+        })
+    }
+    // Check if answer author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
+    // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
+    if (answerAuthor.reputation >= 60) {
+        answerAuthor.badges.map(badge => {
+            if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
+                badge.badgesList.push('Master')
+            }
+        })
+    } else if (answerAuthor.reputation >= 100) {
+        answerAuthor.badges.map(badge => {
+            if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
+                badge.badgesList.push('Professor')
+            }
+        })
+    }
+    // increase question author reputation by 4 .
+    questionAuthor.reputation += 4;
+    // Check if question author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
+    // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
+    if (questionAuthor.reputation >= 60) {
+        questionAuthor.badges.map(badge => {
+            if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
+                badge.badgesList.push('Master')
+            }
+        })
+    } else if (questionAuthor.reputation >= 100) {
+        questionAuthor.badges.map(badge => {
+            if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
+                badge.badgesList.push('Professor')
+            }
+        })
+    }
+
+    await Promise.all([
+        await answerAuthor.save(),
+        await questionAuthor.save(),
+        await answersList.save(),
+    ])
+    res.status(200).json({ status: 200, message: 'All Good.', response })
 }
 
 export const deleteAnswer = async (req, res) => {
     const { questionId, answerId } = req.body
-    if (!(mongoose.Types.ObjectId.isValid(questionId))) {
-        return res.status(400).json({ status: 400, message: 'Question ID is invalid', data: null })
+    const userId = req.userId;
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+        return res.status(401).send({ status: 401, message: 'Invalid question id.' });
     }
-    if (!(mongoose.Types.ObjectId.isValid(req.userId))) {
-        return res.status(400).json({ status: 400, message: 'User ID is invalid', data: null })
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(401).send({ status: 401, message: 'Invalid user id.' });
     }
-    if (!(mongoose.Types.ObjectId.isValid(answerId))) {
-        return res.status(400).json({ status: 400, message: 'Answer ID is invalid', data: null })
+    if (!mongoose.Types.ObjectId.isValid(answerId)) {
+        return res.status(401).send({ status: 401, message: 'Invalid answer id.' });
     }
+    try {
+        const answerList = await Answer.findOne({ questionId })
 
-    const question = await Question.findById(questionId)
-
-    if (!question) {
-        return res.status(404).json({ status: 404, message: 'Question not Found', data: null })
+        if (!answerList) {
+            return res.status(404).json({ status: 404, message: 'Question of this answer not found. please check question id.' });
+        }
+        const isAnswerExist = answerList.answers.find(answer => answer._id ==answerId)
+        if (!isAnswerExist) {
+            return res.status(404).json({ status: 404, message: 'Answer not found.' });
+        }
+        answerList.answers = answerList.answers.filter(answer => answer.id !== answerId)
+        await User.findByIdAndUpdate(userId, {
+            $inc: { answerCount: -1,reputation:-5},
+        })
+        answerList.save();
+        res.status(200).json({ status: 200, message: 'Answer deleted successfully.' });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ status: 500, message: 'Internal Server Error' });
     }
-
-    const isAnswerExists = question.answer.find(answer => answer._id == answerId)
-    const isUserValid = question.answer.find(answer => answer.author.id === req.userId)
-    if (!isAnswerExists) {
-        return res.status(404).json({ status: 404, message: 'Answer not Found', data: null })
-    }
-    if (!isUserValid) {
-        return res.status(401).json({ status: 401, message: 'User cannot delete this answer', data: null })
-    }
-
-    Question.findByIdAndUpdate(questionId, {
-        $pull: { answer: { _id: answerId } },
-        $inc: { noOfAnswers: -1 }
-
-    }, { new: true })
-        .then(newQuestion => res.status(200).json({ status: 200, message: 'Answer Deleted Successfully.', data: newQuestion }))
-        .catch(err => res.status(500).json({ status: 500, message: 'Answer cannot be delete.', error: err.message }))
-
 }

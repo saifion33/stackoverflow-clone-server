@@ -18,6 +18,8 @@ const userSchema = new Schema({
     imageUrl:{type:String,default:null},
     questionCount:{type:Number,default:0},
     answerCount:{type:Number,default:0},
+    totalUpvotesByUser:{type:Number,default:0},
+    acceptedAnswerCount:{type:Number,default:0},
     badges:{type:[badgeSchema],default:[{name:'bronze',count:0,badgesList:[]},{name:'silver',count:0,badgesList:[]},{name:'gold',count:0,badgesList:[]}]},
     joinedOn: {type: Date, default: Date.now}
 })
