@@ -71,69 +71,87 @@ export const getAllAnswers = async (req, res) => {
 
 export const acceptAnswer = async (req, res) => {
     const { questionAuthorId, questionId, answerId, answerAuthorId } = req.body;
-    const response = await Promise.all([
-        await Answer.findOne({ questionId }),
-        await User.findById(answerAuthorId),
-        await User.findById(questionAuthorId)
-    ])
-    const answersList = response[0]
-    const answerAuthor = response[1]
-    const questionAuthor = response[2]
-    const answer = answersList.answers.filter(answer => answer._id === answerId)
-    // set isAccepted to true
-    answer.isAccepted = true;
-    // increase answer author reputation by 10
-    answerAuthor.reputation += 10;
-    // increase answer author accepted answer count by 1
-    answerAuthor.acceptedAnswerCount += 1;
-
-    // Check if answer author accepted answer count is 10 if yes then give "Accepter" badge to answer author.
-    if (answerAuthor.acceptedAnswerCount === 10) {
-        answerAuthor.badges.map(badge => {
-            if (badge.name === 'gold' && !badge.badgesList.includes('Accepter')) {
-                badge.badgesList.push('Accepter')
-            }
-        })
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+        return res.status(400).json({ status: 400, message:'Invalid question id'});
     }
-    // Check if answer author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
-    // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
-    if (answerAuthor.reputation >= 60) {
-        answerAuthor.badges.map(badge => {
-            if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
-                badge.badgesList.push('Master')
-            }
-        })
-    } else if (answerAuthor.reputation >= 100) {
-        answerAuthor.badges.map(badge => {
-            if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
-                badge.badgesList.push('Professor')
-            }
-        })
+    if (!mongoose.Types.ObjectId.isValid(questionAuthorId)) {
+        return res.status(400).json({ status: 400, message:'Invalid question author id'});
     }
-    // increase question author reputation by 4 .
-    questionAuthor.reputation += 4;
-    // Check if question author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
-    // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
-    if (questionAuthor.reputation >= 60) {
-        questionAuthor.badges.map(badge => {
-            if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
-                badge.badgesList.push('Master')
-            }
-        })
-    } else if (questionAuthor.reputation >= 100) {
-        questionAuthor.badges.map(badge => {
-            if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
-                badge.badgesList.push('Professor')
-            }
-        })
+    if (!mongoose.Types.ObjectId.isValid(answerId)) {
+        return res.status(400).json({ status: 400, message:'Invalid answer id'});
+    }
+    if (!mongoose.Types.ObjectId.isValid(answerAuthorId)) {
+        return res.status(400).json({ status: 400, message:'Invalid answer author id'});
     }
 
-    await Promise.all([
-        await answerAuthor.save(),
-        await questionAuthor.save(),
-        await answersList.save(),
-    ])
-    res.status(200).json({ status: 200, message: 'All Good.', response })
+    try {
+        const response = await Promise.all([
+            await Answer.findOne({ questionId }),
+            await User.findById(answerAuthorId),
+            await User.findById(questionAuthorId)
+        ])
+        const answersList = response[0]
+        const answerAuthor = response[1]
+        const questionAuthor = response[2]
+        const answer = answersList.answers.find(answer => answer._id == answerId)
+        // set isAccepted to true
+        answer.isAccepted = true;
+        // increase answer author reputation by 10
+        answerAuthor.reputation += 10;
+        // increase answer author accepted answer count by 1
+        answerAuthor.acceptedAnswerCount += 1;
+    
+        // Check if answer author accepted answer count is 10 if yes then give "Accepter" badge to answer author.
+        if (answerAuthor.acceptedAnswerCount === 10) {
+            answerAuthor.badges.map(badge => {
+                if (badge.name === 'gold' && !badge.badgesList.includes('Accepter')) {
+                    badge.badgesList.push('Accepter')
+                }
+            })
+        }
+        // Check if answer author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
+        // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
+        if (answerAuthor.reputation >= 100) {
+            answerAuthor.badges.map(badge => {
+                if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
+                    badge.badgesList.push('Master')
+                }
+            })
+        } else if (answerAuthor.reputation >= 200) {
+            answerAuthor.badges.map(badge => {
+                if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
+                    badge.badgesList.push('Professor')
+                }
+            })
+        }
+        // increase question author reputation by 4 .
+        questionAuthor.reputation += 4;
+        // Check if question author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
+        // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
+        if (questionAuthor.reputation >= 100) {
+            questionAuthor.badges.map(badge => {
+                if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
+                    badge.badgesList.push('Master')
+                }
+            })
+        } else if (questionAuthor.reputation >= 200) {
+            questionAuthor.badges.map(badge => {
+                if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
+                    badge.badgesList.push('Professor')
+                }
+            })
+        }
+    
+        await Promise.all([
+            await answerAuthor.save(),
+            await questionAuthor.save(),
+            await answersList.save(),
+        ])
+        res.status(200).json({ status: 200, message: 'All Good'})
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({status: 500, message:'Internal Server Error'})
+    }
 }
 
 export const deleteAnswer = async (req, res) => {
