@@ -109,15 +109,15 @@ export const acceptAnswer = async (req, res) => {
                 }
             })
         }
-        // Check if answer author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
-        // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
-        if (answerAuthor.reputation >= 100) {
+        // Check if answer author reputation is greater then 200 and user don't have SILVER "Master" badge if not then give one .
+        // or reputation is greater then 400 and user don't have GOLD "Professor" badge. if not then give one .
+        if (answerAuthor.reputation >= 200) {
             answerAuthor.badges.map(badge => {
                 if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
                     badge.badgesList.push('Master')
                 }
             })
-        } else if (answerAuthor.reputation >= 200) {
+        } else if (answerAuthor.reputation >= 400) {
             answerAuthor.badges.map(badge => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
                     badge.badgesList.push('Professor')
@@ -126,15 +126,15 @@ export const acceptAnswer = async (req, res) => {
         }
         // increase question author reputation by 4 .
         questionAuthor.reputation += 4;
-        // Check if question author reputation is greater then 60 and user don't have SILVER "Master" badge if not then give one .
-        // or reputation is greater then 100 and user don't have GOLD "Professor" badge. if not then give one .
-        if (questionAuthor.reputation >= 100) {
+        // Check if question author reputation is greater then 200 and user don't have SILVER "Master" badge if not then give one .
+        // or reputation is greater then 400 and user don't have GOLD "Professor" badge. if not then give one .
+        if (questionAuthor.reputation >= 200) {
             questionAuthor.badges.map(badge => {
                 if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
                     badge.badgesList.push('Master')
                 }
             })
-        } else if (questionAuthor.reputation >= 200) {
+        } else if (questionAuthor.reputation >= 400) {
             questionAuthor.badges.map(badge => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
                     badge.badgesList.push('Professor')

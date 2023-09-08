@@ -46,7 +46,15 @@ export const askQuestion = async (req, res) => {
             userAccount.reputation += 5;
         }
         userAccount.questionCount += 1;
-        if (userAccount.questionCount ==5) {
+        if (userAccount.questionCount===2) {
+            userAccount.badges.map(badge=>{
+                if (badge.name==='bronze' && !badge.badgesList.includes('Student')) {
+                    badge.badgesList.push('Student')
+                    badge.count+=1;
+                }
+            })
+        }
+        if (userAccount.questionCount ==20) {
             userAccount.badges.map(badge=>{
                 if (badge.name==='silver' && !badge.badgesList.includes('Knowledge Seeker')) {
                     badge.badgesList.push('Knowledge Seeker')
