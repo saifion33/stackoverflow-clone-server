@@ -132,9 +132,12 @@ export const deleteQuestion = async (req, res) => {
         await Answer.findOneAndDelete({questionId})
         const userAccount=await User.findById(authorId)
         userAccount.questionCount-=1;
+
+        // check if it is user's last question if yes then -5 reputaion 
         if (userAccount.questionCount==0) {
             userAccount.reputation-=5;
         }
+
         await userAccount.save();
         res.status(200).json({ status: 200, message:'Question deleted successfully.' })
     } catch (error) {
@@ -148,18 +151,15 @@ export const deleteQuestion = async (req, res) => {
 // *****************************************************************************************************************
 
 export const voteQuestion = async (req, res) => {
-    const { questionId, voteType } = req.body;
+    const { id:questionId, voteType } = req.body;
     const userId = req.userId
     // check questionId and userId is valid ids or not
     const isIdsValid = mongoose.Types.ObjectId.isValid(questionId) && mongoose.Types.ObjectId.isValid(userId);
     if (!isIdsValid) {
-        return res.status(403).json({ status: 403, message: 'questionId or userId is invalid', data: null })
+        return res.status(403).json({ status: 403, message: 'questionId or userId is invalid'})
     }
-
-
     try {
         const question = await Question.findById(questionId)
-
         // check if upVote contains userId
         const upIndex = question.upVote.findIndex(id => id === userId)
         // check if downVote contains userId
@@ -193,16 +193,18 @@ export const voteQuestion = async (req, res) => {
                 question.downVote = question.downVote.filter(id => id !== userId)
             }
         }
+        try {
+            await Question.findByIdAndUpdate(questionId,question)
+            res.status(200).json({ status: 200, message: `vote updated successfully`})
+        } catch (error) {
 
-        // find question by id and update question
-        Question.findByIdAndUpdate(questionId, question, { new: true }).then((question) => {
-            res.status(200).json({ status: 200, message: `vote updated successfully`, data: question })
-        }).catch(err => {
-            res.status(500).json({ status: 500, message: 'error updating question', error: err })
-        })
+            console.log(error)
+            res.status(500).json({ status: 500, message: 'Internal Server Error.' })
+        }
 
     }
-    catch (err) {
-        res.status(500).json({ status: 500, message: 'error updating question', error: err })
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ status: 500, message: 'Internal Server Error.' })
     }
 }
