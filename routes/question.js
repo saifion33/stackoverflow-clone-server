@@ -7,7 +7,7 @@ const router = express.Router()
 router.get('/all', getAllQuestions)
 router.get('/:questionId',getQuestionById)
 router.post('/ask', auth, askQuestion)
-router.delete('/delete', auth, deleteQuestion)
+router.delete('/delete/:questionId', auth, deleteQuestion)
 router.patch('/vote', auth, voteQuestion)
 
 export default router

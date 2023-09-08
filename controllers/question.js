@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Question from "../models/question.js";
 import User from "../models/auth.js"
+import Answer from "../models/answer.js"
 
 
 // get all questions
@@ -46,19 +47,19 @@ export const askQuestion = async (req, res) => {
             userAccount.reputation += 5;
         }
         userAccount.questionCount += 1;
-        if (userAccount.questionCount===2) {
-            userAccount.badges.map(badge=>{
-                if (badge.name==='bronze' && !badge.badgesList.includes('Student')) {
+        if (userAccount.questionCount === 2) {
+            userAccount.badges.map(badge => {
+                if (badge.name === 'bronze' && !badge.badgesList.includes('Student')) {
                     badge.badgesList.push('Student')
-                    badge.count+=1;
+                    badge.count += 1;
                 }
             })
         }
-        if (userAccount.questionCount ==20) {
-            userAccount.badges.map(badge=>{
-                if (badge.name==='silver' && !badge.badgesList.includes('Knowledge Seeker')) {
+        if (userAccount.questionCount == 20) {
+            userAccount.badges.map(badge => {
+                if (badge.name === 'silver' && !badge.badgesList.includes('Knowledge Seeker')) {
                     badge.badgesList.push('Knowledge Seeker')
-                    badge.count+=1;
+                    badge.count += 1;
                 }
             })
         }
@@ -107,30 +108,39 @@ export const getQuestionById = async (req, res) => {
 // *****************************************************************************************************************
 
 export const deleteQuestion = async (req, res) => {
-    const { questionId } = req.body;
+    const questionId  = req.params.questionId;
     const authorId = req.userId;
     // when questionId or authorId are not valid
-    if (!(mongoose.Types.ObjectId.isValid(questionId) && mongoose.Types.ObjectId.isValid(authorId))) {
-        return res.status(401).json({ status: 404, message: 'Invalid questionId or authorId' })
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+        return res.status(401).json({ status: 404, message: 'Invalid questionId.' })
     }
-
-    const question = await Question.findById(questionId)
-    // when question not exist or not found by given id
-    if (!question) {
-        return res.status(404).json({ status: 404, message: 'Question not found', data: null })
+    if (!mongoose.Types.ObjectId.isValid(authorId)) {
+        return res.status(401).json({ status: 404, message: 'Invalid userId.' })
     }
+    try {
+        const question = await Question.findById(questionId)
+        // when question not exist or not found by given id
+        if (!question) {
+            return res.status(404).json({ status: 404, message: 'Question not found' })
+        }
 
-    // when author id not match authorId
-    if (question.author.id !== authorId) {
-        return res.status(403).json({ status: 403, message: `You don't have permission to delete this question`, data: null })
+        // when author id not match authorId
+        if (question.author._id !== authorId) {
+            return res.status(403).json({ status: 403, message: `You don't have permission to delete this question` })
+        }
+        await Question.findByIdAndDelete(questionId)
+        await Answer.findOneAndDelete({questionId})
+        const userAccount=await User.findById(authorId)
+        userAccount.questionCount-=1;
+        if (userAccount.questionCount==0) {
+            userAccount.reputation-=5;
+        }
+        await userAccount.save();
+        res.status(200).json({ status: 200, message:'Question deleted successfully.' })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ status:500,message:'Internal Server Error.' })
     }
-
-    // delete question by given id
-    Question.findByIdAndDelete(questionId).then(() => {
-        res.status(200).json({ status: 200, message: 'Question deleted successfully', data: question })
-    }).catch(err => {
-        res.status(500).json({ status: 500, message: err.message, err })
-    })
 }
 
 // *****************************************************************************************************************
