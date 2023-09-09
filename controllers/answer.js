@@ -102,7 +102,7 @@ export const acceptAnswer = async (req, res) => {
         answerAuthor.acceptedAnswerCount += 1;
     
         // Check if answer author accepted answer count is 10 if yes then give "Accepter" badge to answer author.
-        if (answerAuthor.acceptedAnswerCount === 10) {
+        if (answerAuthor.acceptedAnswerCount === 20) {
             answerAuthor.badges.map(badge => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Accepter')) {
                     badge.badgesList.push('Accepter')

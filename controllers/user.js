@@ -26,6 +26,9 @@ export const updateUser = async (req, res) => {
     }
     try {
         const user = await User.findById(userId)
+        if (!user) {
+            return res.status(404).json({ status: 401, message: 'User Account not found.' })
+        }
         if (user._id != req.userId) {
             return res.status(401).json({ status: 401, message: 'User do not have permission to update Profile' })
         }

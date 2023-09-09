@@ -108,7 +108,7 @@ export const getQuestionById = async (req, res) => {
 // *****************************************************************************************************************
 
 export const deleteQuestion = async (req, res) => {
-    const questionId  = req.params.questionId;
+    const questionId = req.params.questionId;
     const authorId = req.userId;
     // when questionId or authorId are not valid
     if (!mongoose.Types.ObjectId.isValid(questionId)) {
@@ -129,20 +129,20 @@ export const deleteQuestion = async (req, res) => {
             return res.status(403).json({ status: 403, message: `You don't have permission to delete this question` })
         }
         await Question.findByIdAndDelete(questionId)
-        await Answer.findOneAndDelete({questionId})
-        const userAccount=await User.findById(authorId)
-        userAccount.questionCount-=1;
+        await Answer.findOneAndDelete({ questionId })
+        const userAccount = await User.findById(authorId)
+        userAccount.questionCount -= 1;
 
         // check if it is user's last question if yes then -5 reputaion 
-        if (userAccount.questionCount==0) {
-            userAccount.reputation-=5;
+        if (userAccount.questionCount == 0) {
+            userAccount.reputation -= 5;
         }
 
         await userAccount.save();
-        res.status(200).json({ status: 200, message:'Question deleted successfully.' })
+        res.status(200).json({ status: 200, message: 'Question deleted successfully.' })
     } catch (error) {
         console.log(error)
-        res.status(500).json({ status:500,message:'Internal Server Error.' })
+        res.status(500).json({ status: 500, message: 'Internal Server Error.' })
     }
 }
 
@@ -151,15 +151,25 @@ export const deleteQuestion = async (req, res) => {
 // *****************************************************************************************************************
 
 export const voteQuestion = async (req, res) => {
-    const { id:questionId, voteType } = req.body;
+    const { id: questionId, voteType } = req.body;
     const userId = req.userId
     // check questionId and userId is valid ids or not
     const isIdsValid = mongoose.Types.ObjectId.isValid(questionId) && mongoose.Types.ObjectId.isValid(userId);
     if (!isIdsValid) {
-        return res.status(403).json({ status: 403, message: 'questionId or userId is invalid'})
+        return res.status(403).json({ status: 403, message: 'questionId or userId is invalid' })
     }
     try {
-        const question = await Question.findById(questionId)
+        const response = await Promise.all([
+            await Question.findById(questionId),
+            await User.findById(userId)
+        ])
+        const question = response[0];
+        const user = response[1];
+        if (question.author._id==user._id) {
+            return res.status(401).json({status:401, message:"You can't vote your own question."})
+        }
+        const questionAuthor = await User.findById(question.author._id);
+        
         // check if upVote contains userId
         const upIndex = question.upVote.findIndex(id => id === userId)
         // check if downVote contains userId
@@ -171,33 +181,107 @@ export const voteQuestion = async (req, res) => {
             // when downVote contains userId then remove it
             if (downIndex !== -1) {
                 question.downVote = question.downVote.filter(id => id !== userId)
+                questionAuthor.reputation += 2;
+                question.author.reputation += 2;
+                user.reputation += 2;
             }
             // when upVote not contains userId then push userId into upVote Array
             if (upIndex === -1) {
                 question.upVote.push(userId)
+                questionAuthor.reputation += 6;
+                question.author.reputation += 6;
+                user.reputation += 2;
+                user.totalUpvotesByUser+=1;
+                 if (question.upVote.length >= 4) {
+                    questionAuthor.badges.map(badge => {
+                        if (badge.name === 'bronze' && !badge.badgesList.includes('Nice Question')) {
+                            badge.count+=1;
+                            badge.badgesList.push('Nice Question');
+                        }
+                    })
+                }
+                else if (question.upVote.length >= 10) {
+                    questionAuthor.badges.map(badge => {
+                        if (badge.name === 'silver' && !badge.badgesList.includes('Good Question')) {
+                            badge.count+=1;
+                            badge.badgesList.push('Good Question');
+                        }
+                    })
+                }
+                else if (question.upVote.length >= 20) {
+                    questionAuthor.badges.map(badge => {
+                        if (badge.name === 'gold' && !badge.badgesList.includes('Great Question')) {
+                            badge.count+=1;
+                            badge.badgesList.push('Great Question');
+                        }
+                    })
+                }
+                if (user.totalUpvotesByUser>=15) {
+                    user.badges.map(badge=>{
+                        if (badge.name==='silver' && !badge.badgesList.includes('Voter')) {
+                            badge.count+=1;
+                            badge.badgesList.push('Voter');
+                        }
+                    })
+                }
+
             } else {
                 // when upVote contains userId then remove it
                 question.upVote = question.upVote.filter(id => id !== userId)
+                questionAuthor.reputation -= 6;
+                question.author.reputation -= 6;
+                user.reputation -= 2;
+                user.totalUpvotesByUser-=1;
             }
 
         } else if (voteType === 'downVote') {
             // when upVote contains userId then remove it
             if (upIndex !== -1) {
                 question.upVote = question.upVote.filter(id => id !== userId)
+                questionAuthor.reputation -= 6;
+                question.author.reputation -= 6;
+                user.reputation -= 2;
             }
             // when downVote not contains userId then push userId into downVote Array
             if (downIndex === -1) {
                 question.downVote.push(userId)
+                questionAuthor.reputation -= 2;
+                question.author.reputation -= 2;
+                user.reputation -= 2;
             } else {
                 // when downVote contains userId then remove it
                 question.downVote = question.downVote.filter(id => id !== userId)
+                questionAuthor.reputation += 2;
+                question.author.reputation += 2;
+                user.reputation += 2;
             }
         }
-        try {
-            await Question.findByIdAndUpdate(questionId,question)
-            res.status(200).json({ status: 200, message: `vote updated successfully`})
-        } catch (error) {
 
+        if (questionAuthor.reputation >= 200) {
+            questionAuthor.badges.map(badge => {
+                if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
+                    badge.count+=1;
+                    badge.badgesList.push('Master')
+                }
+            })
+        } else if (questionAuthor.reputation >= 400) {
+            questionAuthor.badges.map(badge => {
+                if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
+                    badge.count+=1;
+                    badge.badgesList.push('Professor')
+                }
+            })
+        }
+        
+
+        try {
+            await Promise.all([
+                await questionAuthor.save(),
+                await user.save(),
+                await Question.findByIdAndUpdate(questionId, question)
+            ])
+            res.status(200).json({ status: 200, message: `vote updated successfully` })
+        } catch (error) {
             console.log(error)
             res.status(500).json({ status: 500, message: 'Internal Server Error.' })
         }
