@@ -165,11 +165,11 @@ export const voteQuestion = async (req, res) => {
         ])
         const question = response[0];
         const user = response[1];
-        if (question.author._id==user._id) {
-            return res.status(401).json({status:401, message:"You can't vote your own question."})
+        if (question.author._id == user._id) {
+            return res.status(401).json({ status: 401, message: "You can't vote your own question." })
         }
         const questionAuthor = await User.findById(question.author._id);
-        
+
         // check if upVote contains userId
         const upIndex = question.upVote.findIndex(id => id === userId)
         // check if downVote contains userId
@@ -191,11 +191,11 @@ export const voteQuestion = async (req, res) => {
                 questionAuthor.reputation += 6;
                 question.author.reputation += 6;
                 user.reputation += 2;
-                user.totalUpvotesByUser+=1;
-                 if (question.upVote.length >= 4) {
+                user.totalUpvotesByUser += 1;
+                if (question.upVote.length >= 4) {
                     questionAuthor.badges.map(badge => {
                         if (badge.name === 'bronze' && !badge.badgesList.includes('Nice Question')) {
-                            badge.count+=1;
+                            badge.count += 1;
                             badge.badgesList.push('Nice Question');
                         }
                     })
@@ -203,7 +203,7 @@ export const voteQuestion = async (req, res) => {
                 else if (question.upVote.length >= 10) {
                     questionAuthor.badges.map(badge => {
                         if (badge.name === 'silver' && !badge.badgesList.includes('Good Question')) {
-                            badge.count+=1;
+                            badge.count += 1;
                             badge.badgesList.push('Good Question');
                         }
                     })
@@ -211,15 +211,15 @@ export const voteQuestion = async (req, res) => {
                 else if (question.upVote.length >= 20) {
                     questionAuthor.badges.map(badge => {
                         if (badge.name === 'gold' && !badge.badgesList.includes('Great Question')) {
-                            badge.count+=1;
+                            badge.count += 1;
                             badge.badgesList.push('Great Question');
                         }
                     })
                 }
-                if (user.totalUpvotesByUser>=15) {
-                    user.badges.map(badge=>{
-                        if (badge.name==='silver' && !badge.badgesList.includes('Voter')) {
-                            badge.count+=1;
+                if (user.totalUpvotesByUser >= 15) {
+                    user.badges.map(badge => {
+                        if (badge.name === 'silver' && !badge.badgesList.includes('Voter')) {
+                            badge.count += 1;
                             badge.badgesList.push('Voter');
                         }
                     })
@@ -231,7 +231,7 @@ export const voteQuestion = async (req, res) => {
                 questionAuthor.reputation -= 6;
                 question.author.reputation -= 6;
                 user.reputation -= 2;
-                user.totalUpvotesByUser-=1;
+                user.totalUpvotesByUser -= 1;
             }
 
         } else if (voteType === 'downVote') {
@@ -260,20 +260,33 @@ export const voteQuestion = async (req, res) => {
         if (questionAuthor.reputation >= 200) {
             questionAuthor.badges.map(badge => {
                 if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
-                    badge.count+=1;
+                    badge.count += 1;
                     badge.badgesList.push('Master')
                 }
             })
         } else if (questionAuthor.reputation >= 400) {
             questionAuthor.badges.map(badge => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
-                    badge.count+=1;
+                    badge.count += 1;
                     badge.badgesList.push('Professor')
                 }
             })
         }
-        
-
+        if (user.reputation >= 200) {
+            user.badges.map(badge => {
+                if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
+                    badge.count += 1;
+                    badge.badgesList.push('Master')
+                }
+            })
+        } else if (user.reputation >= 400) {
+            user.badges.map(badge => {
+                if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
+                    badge.count += 1;
+                    badge.badgesList.push('Professor')
+                }
+            })
+        }
         try {
             await Promise.all([
                 await questionAuthor.save(),
