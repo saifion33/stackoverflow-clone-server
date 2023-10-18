@@ -5,8 +5,8 @@
         "node": true
     },
     "extends": "eslint:recommended",
-    "overrides": [
-    ],
+    "overrides": [],
+    "parser": "babel-eslint",
     "parserOptions": {
         "ecmaVersion": "latest",
         "sourceType": "module"

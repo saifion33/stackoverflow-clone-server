@@ -1,7 +1,14 @@
+
 import mongoose from "mongoose";
 import Question from "../models/question.js";
 import User from "../models/auth.js"
 import Answer from "../models/answer.js"
+import { sendNotification } from "../index.js";
+
+
+
+
+
 
 
 // get all questions
@@ -192,35 +199,50 @@ export const voteQuestion = async (req, res) => {
                 question.author.reputation += 6;
                 user.reputation += 2;
                 user.totalUpvotesByUser += 1;
+                if (questionAuthor.notificationId) {
+                    await sendNotification(questionAuthor.notificationId, `${user.displayName} Upvote your question.`, `Congratulations! ${questionAuthor.displayName} you get a upvote`)
+                }
                 if (question.upVote.length >= 4) {
-                    questionAuthor.badges.map(badge => {
+                    questionAuthor.badges.map(async (badge) => {
                         if (badge.name === 'bronze' && !badge.badgesList.includes('Nice Question')) {
                             badge.count += 1;
                             badge.badgesList.push('Nice Question');
+                            if (questionAuthor.notificationId) {
+                                await sendNotification(questionAuthor.notificationId, `Congratulations ${questionAuthor.displayName}`, ` you get Nice Question badge.`)
+                            }
                         }
                     })
                 }
                 else if (question.upVote.length >= 10) {
-                    questionAuthor.badges.map(badge => {
+                    questionAuthor.badges.map(async (badge) => {
                         if (badge.name === 'silver' && !badge.badgesList.includes('Good Question')) {
                             badge.count += 1;
                             badge.badgesList.push('Good Question');
+                            if (questionAuthor.notificationId) {
+                                await sendNotification(questionAuthor.notificationId, `Congratulations ${questionAuthor.displayName}`,` you get Good Question badge.`)
+                            }
                         }
                     })
                 }
                 else if (question.upVote.length >= 20) {
-                    questionAuthor.badges.map(badge => {
+                    questionAuthor.badges.map(async (badge) => {
                         if (badge.name === 'gold' && !badge.badgesList.includes('Great Question')) {
                             badge.count += 1;
                             badge.badgesList.push('Great Question');
+                            if (questionAuthor.notificationId) {
+                                await sendNotification(questionAuthor.notificationId, `Congratulations ${questionAuthor.displayName}`,` you get Great Question badge.`)
+                            }
                         }
                     })
                 }
                 if (user.totalUpvotesByUser >= 15) {
-                    user.badges.map(badge => {
+                    user.badges.map(async (badge) => {
                         if (badge.name === 'silver' && !badge.badgesList.includes('Voter')) {
                             badge.count += 1;
                             badge.badgesList.push('Voter');
+                            if (user.notificationId) {
+                                await sendNotification(user.notificationId, `Congratulations ${questionAuthor.displayName}`,` you get Nice Question badge.`)
+                            }
                         }
                     })
                 }

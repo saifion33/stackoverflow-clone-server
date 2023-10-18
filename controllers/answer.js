@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Answer from "../models/answer.js"
 import User from "../models/auth.js"
+import { sendNotification } from "../index.js";
 
 export const postAnswer = async (req, res) => {
     const { questionId, questionAuthorId, answerBody } = req.body;
@@ -71,7 +72,7 @@ export const getAllAnswers = async (req, res) => {
 
 export const acceptAnswer = async (req, res) => {
     const { questionAuthorId, questionId, answerId, answerAuthorId } = req.body;
-    const userId=req.userId;
+    const userId = req.userId;
     if (!mongoose.Types.ObjectId.isValid(questionId)) {
         return res.status(400).json({ status: 400, message: 'Invalid question id' });
     }
@@ -94,13 +95,13 @@ export const acceptAnswer = async (req, res) => {
         const answersList = response[0]
         const answerAuthor = response[1]
         const questionAuthor = response[2]
-        
+
         const answer = answersList.answers.find(answer => answer._id == answerId)
-        if (questionAuthor._id.toString()!==userId) {
-            return res.status(401).json({status:401,message:'You are not allowed to accept this answer.'})
+        if (questionAuthor._id.toString() !== userId) {
+            return res.status(401).json({ status: 401, message: 'You are not allowed to accept this answer.' })
         }
-        if (answer.author._id.toString()===questionAuthor._id.toString()) {
-            return res.status(401).json({status:401,message:"you can't accept your own answer."});
+        if (answer.author._id.toString() === questionAuthor._id.toString()) {
+            return res.status(401).json({ status: 401, message: "you can't accept your own answer." });
         }
         // set isAccepted to true
         answer.isAccepted = true;
@@ -108,27 +109,39 @@ export const acceptAnswer = async (req, res) => {
         answerAuthor.reputation += 10;
         // increase answer author accepted answer count by 1
         answerAuthor.acceptedAnswerCount += 1;
+        if (answerAuthor.notificationId) {
+            await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `${questionAuthor.displayName} accept your answer.`)
+        }
 
         // Check if answer author accepted answer count is 10 if yes then give "Accepter" badge to answer author.
         if (answerAuthor.acceptedAnswerCount === 20) {
-            answerAuthor.badges.map(badge => {
+            answerAuthor.badges.map(async (badge) => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Accepter')) {
                     badge.badgesList.push('Accepter')
+                    if (answerAuthor.notificationId) {
+                        await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Accepter badge.`)
+                    }
                 }
             })
         }
         // Check if answer author reputation is greater then 200 and user don't have SILVER "Master" badge if not then give one .
         // or reputation is greater then 400 and user don't have GOLD "Professor" badge. if not then give one .
         if (answerAuthor.reputation >= 200) {
-            answerAuthor.badges.map(badge => {
+            answerAuthor.badges.map(async (badge) => {
                 if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
                     badge.badgesList.push('Master')
+                    if (answerAuthor.notificationId) {
+                        await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Master badge.`)
+                    }
                 }
             })
         } else if (answerAuthor.reputation >= 400) {
-            answerAuthor.badges.map(badge => {
+            answerAuthor.badges.map(async (badge) => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
                     badge.badgesList.push('Professor')
+                    if (answerAuthor.notificationId) {
+                        await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Professor badge.`)
+                    }
                 }
             })
         }
@@ -137,15 +150,32 @@ export const acceptAnswer = async (req, res) => {
         // Check if question author reputation is greater then 200 and user don't have SILVER "Master" badge if not then give one .
         // or reputation is greater then 400 and user don't have GOLD "Professor" badge. if not then give one .
         if (questionAuthor.reputation >= 200) {
-            questionAuthor.badges.map(badge => {
+            questionAuthor.badges.map(async (badge) => {
                 if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
                     badge.badgesList.push('Master')
+                    if (questionAuthor.notificationId) {
+                        await sendNotification(questionAuthor.notificationId, `Congratulations ${questionAuthor.displayName}`, `You get Master badge.`)
+                    }
                 }
             })
         } else if (questionAuthor.reputation >= 400) {
-            questionAuthor.badges.map(badge => {
+            questionAuthor.badges.map(async (badge) => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
                     badge.badgesList.push('Professor')
+                    if (questionAuthor.notificationId) {
+                        await sendNotification(questionAuthor.notificationId, `Congratulations ${questionAuthor.displayName}`, `You get Professor badge.`)
+                    }
+                }
+            })
+        }
+        if (questionAuthor.isAcceptAnswerFirstTime) {
+            questionAuthor.isAcceptAnswerFirstTime =false;
+            questionAuthor.badges.map(async (badge) => {
+                if (badge.name === 'bronze' && !badge.badgesList.includes('Scholar')) {
+                    badge.badgesList.push('Scholar');
+                    if (questionAuthor.notificationId) {
+                        await sendNotification(questionAuthor.notificationId, `Congratulations ${questionAuthor.displayName}`, `You get Scholar badge.`)
+                    }
                 }
             })
         }
@@ -197,8 +227,8 @@ export const deleteAnswer = async (req, res) => {
 }
 
 export const voteAnswer = async (req, res) => {
-    const { id:answerId, answerAuthorId, questionId, voteType } = req.body;
-    const userId=req.userId;
+    const { id: answerId, answerAuthorId, questionId, voteType } = req.body;
+    const userId = req.userId;
     if (!mongoose.Types.ObjectId.isValid(answerId)) {
         return res.status(400).json({ status: 400, message: 'Invalid answer ID.' });
     }
@@ -219,7 +249,7 @@ export const voteAnswer = async (req, res) => {
         const user = response[0];
         const answerAuthor = response[1];
         if (!user) {
-            return res.status(404).json({status:404,message:"user account not found."})
+            return res.status(404).json({ status: 404, message: "user account not found." })
         }
         if (user._id.toString() === answerAuthor._id.toString()) {
             return res.status(401).json({ status: 401, message: "You can't vote your own answer" })
@@ -252,43 +282,61 @@ export const voteAnswer = async (req, res) => {
                 answer.author.reputation += 6;
                 user.reputation += 2;
                 user.totalUpvotesByUser += 1;
+                if (answerAuthor.notificationId) {
+                    await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `${user.displayName} upvote your answer.`)
+                }
 
                 if (answer.upVote.length >= 2) {
-                    answerAuthor.badges.map(badge => {
+                    answerAuthor.badges.map(async (badge) => {
                         if (badge.name === 'bronze' && !badge.badgesList.includes('Teacher')) {
                             badge.count += 1;
                             badge.badgesList.push('Teacher');
+                            if (answerAuthor.notificationId) {
+                                await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Teacher badge.`)
+                            }
                         }
                     })
                 } else if (answer.upVote.length >= 4) {
-                    answerAuthor.badges.map(badge => {
+                    answerAuthor.badges.map(async (badge) => {
                         if (badge.name === 'bronze' && !badge.badgesList.includes('Nice Answer')) {
                             badge.count += 1;
                             badge.badgesList.push('Nice Answer');
+                            if (answerAuthor.notificationId) {
+                                await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Nice Answer badge.`)
+                            }
                         }
                     })
                 }
                 else if (answer.upVote.length >= 10) {
-                    answerAuthor.badges.map(badge => {
+                    answerAuthor.badges.map(async (badge) => {
                         if (badge.name === 'silver' && !badge.badgesList.includes('Good Answer')) {
                             badge.count += 1;
                             badge.badgesList.push('Good Answer');
+                            if (answerAuthor.notificationId) {
+                                await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Good Answer badge.`)
+                            }
                         }
                     })
                 }
                 else if (answer.upVote.length >= 20) {
-                    answerAuthor.badges.map(badge => {
+                    answerAuthor.badges.map(async(badge) => {
                         if (badge.name === 'gold' && !badge.badgesList.includes('Great Answer')) {
                             badge.count += 1;
                             badge.badgesList.push('Great Answer');
+                            if (answerAuthor.notificationId) {
+                                await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Great Answer badge.`)
+                            }
                         }
                     })
                 }
                 if (user.totalUpvotesByUser >= 15) {
-                    user.badges.map(badge => {
+                    user.badges.map(async(badge) => {
                         if (badge.name === 'silver' && !badge.badgesList.includes('Voter')) {
                             badge.count += 1;
                             badge.badgesList.push('Voter');
+                            if (user.notificationId) {
+                                await sendNotification(user.notificationId, `Congratulations ${user.displayName}`, `You get Voter badge.`)
+                            }
                         }
                     })
                 }
@@ -325,32 +373,44 @@ export const voteAnswer = async (req, res) => {
             }
         }
         if (answerAuthor.reputation >= 200) {
-            answerAuthor.badges.map(badge => {
+            answerAuthor.badges.map(async(badge) => {
                 if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
                     badge.count += 1;
                     badge.badgesList.push('Master')
+                    if (answerAuthor.notificationId) {
+                        await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Master badge.`)
+                    }
                 }
             })
         } else if (answerAuthor.reputation >= 400) {
-            answerAuthor.badges.map(badge => {
+            answerAuthor.badges.map(async(badge) => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
                     badge.count += 1;
                     badge.badgesList.push('Professor')
+                    if (answerAuthor.notificationId) {
+                        await sendNotification(answerAuthor.notificationId, `Congratulations ${answerAuthor.displayName}`, `You get Professor badge.`)
+                    }
                 }
             })
         }
         if (user.reputation >= 200) {
-            user.badges.map(badge => {
+            user.badges.map(async(badge) => {
                 if (badge.name === 'silver' && !badge.badgesList.includes('Master')) {
                     badge.count += 1;
                     badge.badgesList.push('Master')
+                    if (user.notificationId) {
+                        await sendNotification(user.notificationId, `Congratulations ${user.displayName}`, `You get Master badge.`)
+                    }
                 }
             })
         } else if (user.reputation >= 400) {
-            user.badges.map(badge => {
+            user.badges.map(async(badge) => {
                 if (badge.name === 'gold' && !badge.badgesList.includes('Professor')) {
                     badge.count += 1;
                     badge.badgesList.push('Professor')
+                    if (user.notificationId) {
+                        await sendNotification(user.notificationId, `Congratulations ${user.displayName}`, `You get Professor badge.`)
+                    }
                 }
             })
         }

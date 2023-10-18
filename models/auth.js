@@ -20,8 +20,10 @@ const userSchema = new Schema({
     answerCount:{type:Number,default:0},
     totalUpvotesByUser:{type:Number,default:0},
     acceptedAnswerCount:{type:Number,default:0},
+    isAcceptAnswerFirstTime:{type:Boolean,default:true},
     badges:{type:[badgeSchema],default:[{name:'bronze',count:0,badgesList:[]},{name:'silver',count:0,badgesList:[]},{name:'gold',count:0,badgesList:[]}]},
-    joinedOn: {type: Date, default: Date.now}
+    joinedOn: {type: Date, default: Date.now},
+    notificationId: {type: String},
 })
 
 export default mongoose.model('User', userSchema)
