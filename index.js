@@ -12,8 +12,8 @@ import questionRoutes from './routes/question.js'
 import answerRoutes from './routes/answer.js'
 import userRoutes from './routes/user.js'
 import notificationRouter from './routes/notification.js'
-
-const credential = admin.credential;
+export const Admin=admin
+const credential = Admin.credential;
 
 const app = express();
 // cofigure environment variables
@@ -47,7 +47,8 @@ initializeApp({
         "client_email": process.env.F_CLIENT_EMAIL,
         "client_id": process.env.F_CLIENT_ID,
       }
-      )
+      ),
+      databaseURL:'https://stackoverflow-44730-default-rtdb.asia-southeast1.firebasedatabase.app/'
 });
 
 

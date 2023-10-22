@@ -9,7 +9,7 @@ export const getAllUsers = async (req, res) => {
         const usersList = await User.find();
 
         const users = usersList.map(user => {
-            return ({ _id: user._id, displayName: user.displayName, location: user.location, tags: user.tags, imageUrl: user.imageUrl, reputation: user.reputation })
+            return ({ _id: user._id,fuid:user.fuid, displayName: user.displayName, location: user.location, tags: user.tags, imageUrl: user.imageUrl, reputation: user.reputation })
         })
         return res.status(200).json({ status: 200, message: 'users get Successfully', data: users })
     } catch (error) {

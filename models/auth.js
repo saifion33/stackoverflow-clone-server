@@ -24,6 +24,7 @@ const userSchema = new Schema({
     badges:{type:[badgeSchema],default:[{name:'bronze',count:0,badgesList:[]},{name:'silver',count:0,badgesList:[]},{name:'gold',count:0,badgesList:[]}]},
     joinedOn: {type: Date, default: Date.now},
     notificationId: {type: String},
+    fuid:{type: String, default:null}
 })
 
 export default mongoose.model('User', userSchema)

@@ -3,38 +3,46 @@ import bycrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 import Tokens from '../models/passwordresetToken.js'
-
+import { getAuth } from 'firebase-admin/auth'
+import { getDatabase } from 'firebase-admin/database'
 
 export const signup = async (req, res) => {
     const { displayName, email, password } = req.body
-
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(409).json({ status: 409, message: "User with this email already exist." })
         }
         const hashedPassword = await bycrypt.hash(password, 10)
-        const userAccount = await User.create({ displayName, email, password: hashedPassword })
+        const fuid = (await getAuth().createUser({ email, password })).uid;
+        const db = getDatabase()
+        const user = db.ref(`/users/${fuid}`)
+        user.set({ online: false, isOnCall: false, name: displayName, email: email,uid:fuid }).then(()=>{
+            console.log('write new user')
+        }).catch(err => console.log(err))
+        const userAccount = await User.create({ displayName, email, password: hashedPassword, fuid })
         // eslint-disable-next-line no-undef
-        const token = jwt.sign({ email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
+        const token = jwt.sign({ email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
         const profile = {
             _id: userAccount._id,
-            displayName: userAccount.displayName,
-            email: userAccount.email,
-            about: userAccount.about,
-            location: userAccount.location,
-            reputation: userAccount.reputation,
             tags: userAccount.tags,
+            fuid: userAccount.fuid,
+            about: userAccount.about,
+            email: userAccount.email,
+            location: userAccount.location,
             imageUrl: userAccount.imageUrl,
-            questionCount: userAccount.questionCount,
-            asnswerCount: userAccount.answerCount,
             joinedOn: userAccount.joinedOn,
+            reputation: userAccount.reputation,
+            displayName: userAccount.displayName,
+            asnswerCount: userAccount.answerCount,
+            questionCount: userAccount.questionCount,
         }
         res.status(200).json({ status: 200, message: 'User Account created successfully.', data: { token, profile } })
 
     } catch (error) {
         console.log(error)
-        res.status(400).json({ status: 500, message: "Error creating user Plese check if you provide all required field" })
+        res.status(400).json({ status: 500, message: "Internal Server Error" })
     }
 }
 
@@ -52,16 +60,17 @@ export const login = async (req, res) => {
 
         const profile = {
             _id: userAccount._id,
-            displayName: userAccount.displayName,
+            fuid: userAccount.fuid,
+            tags: userAccount.tags,
             email: userAccount.email,
             about: userAccount.about,
-            location: userAccount.location,
-            reputation: userAccount.reputation,
-            tags: userAccount.tags,
             imageUrl: userAccount.imageUrl,
-            questionCount: userAccount.questionCount,
-            asnswerCount: userAccount.answerCount,
+            location: userAccount.location,
             joinedOn: userAccount.joinedOn,
+            reputation: userAccount.reputation,
+            displayName: userAccount.displayName,
+            asnswerCount: userAccount.answerCount,
+            questionCount: userAccount.questionCount,
         }
         // eslint-disable-next-line no-undef
         const token = jwt.sign({ email: userAccount.email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
@@ -109,21 +118,23 @@ const sendEmail = async (email, token, deviceInfo) => {
     })
     return res
 }
+
 const base64urlEncoder = (input) => {
     return Buffer.from(input).toString('base64')
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/g, '');
 }
+
 export const forgetPassword = async (req, res) => {
-    const {email,deviceInfo } = req.body;
+    const { email, deviceInfo } = req.body;
     try {
         const userAccount = await User.findOne({ email })
         if (!userAccount) {
             return res.status(404).json({ status: 404, message: 'User Account Not Found.' })
         }
         const token = jwt.sign({ email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '5m' })
-        await Tokens.findOneAndReplace({email},{email,token},{upsert: true})
+        await Tokens.findOneAndReplace({ email }, { email, token }, { upsert: true })
         const encodedToken = base64urlEncoder(token)
         await sendEmail(email, encodedToken, deviceInfo)
         res.status(200).json({ status: 200, message: 'Email Sent Successfully.' })
@@ -140,6 +151,7 @@ const base64urlDecoder = (input) => {
     }
     return Buffer.from(input, 'base64').toString('utf-8');
 }
+
 export const resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
     const decodedToken = decodeURIComponent(base64urlDecoder(token))
