@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.js'
 import questionRoutes from './routes/question.js'
 import answerRoutes from './routes/answer.js'
 import userRoutes from './routes/user.js'
+import callRoutes from './routes/calls.js'
 import notificationRouter from './routes/notification.js'
 export const Admin=admin
 const credential = Admin.credential;
@@ -69,3 +70,4 @@ app.use('/questions', questionRoutes)
 app.use('/answers', answerRoutes)
 app.use('/users', userRoutes)
 app.use('/auth', authRoutes)
+app.use('/calls',callRoutes)

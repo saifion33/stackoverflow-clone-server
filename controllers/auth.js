@@ -5,9 +5,10 @@ import nodemailer from 'nodemailer'
 import Tokens from '../models/passwordresetToken.js'
 import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
+import loginHistory from '../models/loginHistory.js'
 
 export const signup = async (req, res) => {
-    const { displayName, email, password } = req.body
+    const { displayName, email, password,deviceInfo } = req.body
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -17,9 +18,9 @@ export const signup = async (req, res) => {
         const fuid = (await getAuth().createUser({ email, password })).uid;
         const db = getDatabase()
         const user = db.ref(`/users/${fuid}`)
-        user.set({ online: false, isOnCall: false, name: displayName, email: email,uid:fuid }).then(()=>{
-            console.log('write new user')
-        }).catch(err => console.log(err))
+        const callRef=db.ref(`/calls/${fuid}`)
+        user.set({ name: displayName, email: email,uid:fuid }).catch(err => console.log(err));
+        callRef.set({status:'idle'}).catch(err => console.log(err));
         const userAccount = await User.create({ displayName, email, password: hashedPassword, fuid })
         // eslint-disable-next-line no-undef
         const token = jwt.sign({ email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -38,6 +39,10 @@ export const signup = async (req, res) => {
             asnswerCount: userAccount.answerCount,
             questionCount: userAccount.questionCount,
         }
+        await loginHistory.create({
+            userId:profile._id,
+            loginHistory:[deviceInfo]
+        })
         res.status(200).json({ status: 200, message: 'User Account created successfully.', data: { token, profile } })
 
     } catch (error) {
@@ -47,7 +52,7 @@ export const signup = async (req, res) => {
 }
 
 export const login = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password,deviceInfo } = req.body;
     try {
         const userAccount = await User.findOne({ email })
         if (!userAccount) {
@@ -72,12 +77,26 @@ export const login = async (req, res) => {
             asnswerCount: userAccount.answerCount,
             questionCount: userAccount.questionCount,
         }
+        await loginHistory.findOneAndUpdate({userId:profile._id},{
+            $push:{loginHistory:deviceInfo}
+        },{upsert:true})
         // eslint-disable-next-line no-undef
         const token = jwt.sign({ email: userAccount.email, id: userAccount._id }, process.env.JWT_SECRET, { expiresIn: '1h' })
         res.status(200).json({ status: 200, message: 'Login succesfully', data: { token, profile } })
     } catch (error) {
         console.log(error)
         res.status(500).json({ status: 500, message: 'Internal server error' })
+    }
+}
+
+export const getLoginHistory =async (req, res) =>{
+    const userId=req.userId;
+    try {
+        const history=await loginHistory.findOne({userId})
+        res.status(200).json({ status: 200, message:'Login history get succesfully',loginHistory:history.loginHistory })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ status: 500, message: 'Internal server error'})
     }
 }
 
