@@ -172,6 +172,7 @@ export const acceptAnswer = async (req, res) => {
             questionAuthor.isAcceptAnswerFirstTime =false;
             questionAuthor.badges.map(async (badge) => {
                 if (badge.name === 'bronze' && !badge.badgesList.includes('Scholar')) {
+                    badge.count+=1;
                     badge.badgesList.push('Scholar');
                     if (questionAuthor.notificationId) {
                         await sendNotification(questionAuthor.notificationId, `Congratulations ${questionAuthor.displayName}`, `You get Scholar badge.`)

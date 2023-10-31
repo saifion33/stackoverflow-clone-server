@@ -4,6 +4,9 @@
   "description": "This is server code of stackoverflow clone",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": "18.16.1"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
