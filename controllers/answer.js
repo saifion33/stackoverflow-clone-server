@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Answer from "../models/answer.js"
 import User from "../models/auth.js"
 import { sendNotification } from "../index.js";
+import Question from "../models/question.js";
 
 export const postAnswer = async (req, res) => {
     const { questionId, questionAuthorId, answerBody } = req.body;
@@ -15,6 +16,7 @@ export const postAnswer = async (req, res) => {
 
     try {
         const userAccount = await User.findById(userId)
+        const question=await Question.findById(questionId);
         if (!userAccount) {
             return res.status(404).json({ status: 404, message: 'User account not found' })
         }
@@ -44,7 +46,9 @@ export const postAnswer = async (req, res) => {
             $push: { answers: answer }
         }, { new: true, upsert: true })
         const newAnswer = allAnswers.answers[allAnswers.answers.length - 1]
-        await userAccount.save()
+        question.noOfAnswers+=1;
+        await question.save();
+        await userAccount.save();
         res.status(200).json({ status: 200, message: 'Answer posted successfully', data: newAnswer })
     } catch (error) {
         console.log(error)
